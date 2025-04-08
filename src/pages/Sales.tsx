@@ -133,6 +133,8 @@ const Sales = () => {
     setActiveTab('transactions');
   };
   
+  const totalCartAmount = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
+  
   return (
     <MainLayout>
       <h1 className="text-2xl font-bold mb-6">Point of Sale</h1>
@@ -175,7 +177,7 @@ const Sales = () => {
         onClose={() => setIsCheckoutOpen(false)}
         cartItems={cartItems}
         onCompleteCheckout={handleCompleteCheckout}
-        totalAmount={totalAmount}
+        totalAmount={totalCartAmount}
       />
     </MainLayout>
   );
