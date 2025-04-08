@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../components/layouts/MainLayout';
 import AddItemForm, { ItemWithId } from '../components/inventory/AddItemForm';
@@ -7,60 +6,22 @@ import CategoryManager from '../components/inventory/CategoryManager';
 import { toast } from 'sonner';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { saveInventory, loadInventory, saveCategories, loadCategories } from '../utils/localStorage';
 
 const Inventory = () => {
-  const [items, setItems] = useState<ItemWithId[]>(() => {
-    // Mock initial data
-    return [
-      {
-        id: '1',
-        name: 'Laptop',
-        price: 75000,
-        stock: 15,
-        vat: 16,
-        category: 'Electronics'
-      },
-      {
-        id: '2',
-        name: 'Smartphone',
-        price: 45000,
-        stock: 22,
-        vat: 16,
-        category: 'Electronics'
-      },
-      {
-        id: '3',
-        name: 'USB-C Cable',
-        price: 1200,
-        stock: 3,
-        vat: 16,
-        category: 'Accessories'
-      },
-      {
-        id: '4',
-        name: 'Wireless Mouse',
-        price: 2500,
-        stock: 2,
-        vat: 16,
-        category: 'Accessories'
-      },
-      {
-        id: '5',
-        name: 'External SSD',
-        price: 12000,
-        stock: 8,
-        vat: 16,
-        category: 'Storage'
-      }
-    ];
-  });
-  
-  const [categories, setCategories] = useState<string[]>(() => {
-    return [...new Set(items.map(item => item.category))];
-  });
-  
+  const [items, setItems] = useState<ItemWithId[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [editingItem, setEditingItem] = useState<ItemWithId | null>(null);
   const location = useLocation();
+  
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const loadedItems = loadInventory();
+    const loadedCategories = loadCategories();
+    
+    setItems(loadedItems);
+    setCategories(loadedCategories);
+  }, []);
   
   // Check for edit parameter in URL
   useEffect(() => {
@@ -79,7 +40,9 @@ const Inventory = () => {
   // Handler for adding a new category
   const handleAddCategory = (category: string) => {
     if (!categories.includes(category)) {
-      setCategories([...categories, category]);
+      const updatedCategories = [...categories, category];
+      setCategories(updatedCategories);
+      saveCategories(updatedCategories);
     }
   };
 
@@ -95,29 +58,35 @@ const Inventory = () => {
       return;
     }
     
-    setCategories(categories.filter(cat => cat !== categoryToDelete));
+    const updatedCategories = categories.filter(cat => cat !== categoryToDelete);
+    setCategories(updatedCategories);
+    saveCategories(updatedCategories);
     toast.success('Category deleted successfully');
   };
   
   const handleAddItem = (newItem: Omit<ItemWithId, 'id'>) => {
     if (editingItem) {
       // Update existing item
-      setItems(prevItems =>
-        prevItems.map(item =>
-          item.id === editingItem.id ? { ...newItem, id: item.id } : item
-        )
+      const updatedItems = items.map(item =>
+        item.id === editingItem.id ? { ...newItem, id: item.id } : item
       );
+      setItems(updatedItems);
+      saveInventory(updatedItems);
       setEditingItem(null);
       toast.success('Item updated successfully');
     } else {
       // Add new item
-      const id = (items.length + 1).toString();
-      setItems(prevItems => [...prevItems, { ...newItem, id }]);
+      const id = Date.now().toString();
+      const updatedItems = [...items, { ...newItem, id }];
+      setItems(updatedItems);
+      saveInventory(updatedItems);
       toast.success('Item added successfully');
 
       // Add category if it's new
       if (newItem.category && !categories.includes(newItem.category)) {
-        setCategories([...categories, newItem.category]);
+        const updatedCategories = [...categories, newItem.category];
+        setCategories(updatedCategories);
+        saveCategories(updatedCategories);
       }
     }
   };
@@ -128,7 +97,9 @@ const Inventory = () => {
   };
   
   const handleDeleteItem = (id: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== id));
+    const updatedItems = items.filter(item => item.id !== id);
+    setItems(updatedItems);
+    saveInventory(updatedItems);
     toast.success('Item deleted successfully');
   };
   

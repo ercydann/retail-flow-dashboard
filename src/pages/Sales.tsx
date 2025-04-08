@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '../components/layouts/MainLayout';
 import ProductList from '../components/sales/ProductList';
 import Cart, { CartItem } from '../components/sales/Cart';
@@ -8,101 +7,33 @@ import TransactionHistory, { Transaction } from '../components/sales/Transaction
 import { toast } from 'sonner';
 import { ItemWithId } from '../components/inventory/AddItemForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { loadInventory, saveInventory, loadTransactions, saveTransactions } from '../utils/localStorage';
 
 const Sales = () => {
-  // Mock inventory data
-  const [inventory, setInventory] = useState<ItemWithId[]>([
-    {
-      id: '1',
-      name: 'Laptop',
-      price: 75000,
-      stock: 15,
-      vat: 16,
-      category: 'Electronics'
-    },
-    {
-      id: '2',
-      name: 'Smartphone',
-      price: 45000,
-      stock: 22,
-      vat: 16,
-      category: 'Electronics'
-    },
-    {
-      id: '3',
-      name: 'USB-C Cable',
-      price: 1200,
-      stock: 3,
-      vat: 16,
-      category: 'Accessories'
-    },
-    {
-      id: '4',
-      name: 'Wireless Mouse',
-      price: 2500,
-      stock: 2,
-      vat: 16,
-      category: 'Accessories'
-    },
-    {
-      id: '5',
-      name: 'External SSD',
-      price: 12000,
-      stock: 8,
-      vat: 16,
-      category: 'Storage'
-    },
-    {
-      id: '6',
-      name: 'Headphones',
-      price: 8500,
-      stock: 12,
-      vat: 16,
-      category: 'Audio'
-    },
-    {
-      id: '7',
-      name: 'Monitor',
-      price: 28000,
-      stock: 6,
-      vat: 16,
-      category: 'Electronics'
-    },
-    {
-      id: '8',
-      name: 'Keyboard',
-      price: 5500,
-      stock: 10,
-      vat: 16,
-      category: 'Accessories'
-    },
-    {
-      id: '9',
-      name: 'Tablet',
-      price: 35000,
-      stock: 7,
-      vat: 16,
-      category: 'Electronics'
-    }
-  ]);
-  
-  const categories = [...new Set(inventory.map(item => item.category))];
-  
+  const [inventory, setInventory] = useState<ItemWithId[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState('pos');
+  
+  useEffect(() => {
+    const loadedInventory = loadInventory();
+    const loadedTransactions = loadTransactions();
+    
+    setInventory(loadedInventory);
+    setTransactions(loadedTransactions);
+  }, []);
+  
+  const categories = [...new Set(inventory.map(item => item.category))];
   
   const calculatePriceWithVat = (price: number, vat: number): number => {
     return price + (price * vat) / 100;
   };
   
   const handleAddToCart = (item: CartItem) => {
-    // Check if item already exists in cart
     const existingItem = cartItems.find(cartItem => cartItem.id === item.id);
     
     if (existingItem) {
-      // Check stock before updating
       const inventoryItem = inventory.find(i => i.id === item.id);
       if (!inventoryItem || existingItem.quantity >= inventoryItem.stock) {
         toast.error('Cannot add more', {
@@ -111,7 +42,6 @@ const Sales = () => {
         return;
       }
       
-      // Update quantity if item already exists
       setCartItems(
         cartItems.map(cartItem =>
           cartItem.id === item.id
@@ -125,7 +55,6 @@ const Sales = () => {
       );
       toast.success(`Added ${item.name} to cart`);
     } else {
-      // Add new item to cart
       setCartItems([...cartItems, item]);
       toast.success(`Added ${item.name} to cart`);
     }
@@ -165,9 +94,10 @@ const Sales = () => {
   };
   
   const handleCompleteCheckout = (customerName: string, amountPaid: number) => {
-    // Create transaction record
+    const totalAmount = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    
     const newTransaction: Transaction = {
-      id: `T${transactions.length + 1}${Date.now().toString().slice(-4)}`,
+      id: `T${Date.now().toString()}`,
       date: new Date(),
       customerName,
       items: [...cartItems],
@@ -175,36 +105,33 @@ const Sales = () => {
       amountPaid
     };
     
-    setTransactions([newTransaction, ...transactions]);
+    const updatedTransactions = [newTransaction, ...transactions];
+    setTransactions(updatedTransactions);
+    saveTransactions(updatedTransactions);
     
-    // Update inventory
-    setInventory(prev => 
-      prev.map(item => {
-        const cartItem = cartItems.find(ci => ci.id === item.id);
-        if (cartItem) {
-          return {
-            ...item,
-            stock: item.stock - cartItem.quantity
-          };
-        }
-        return item;
-      })
-    );
+    const updatedInventory = inventory.map(item => {
+      const cartItem = cartItems.find(ci => ci.id === item.id);
+      if (cartItem) {
+        return {
+          ...item,
+          stock: item.stock - cartItem.quantity
+        };
+      }
+      return item;
+    });
     
-    // Show success message
+    setInventory(updatedInventory);
+    saveInventory(updatedInventory);
+    
     toast.success('Sale completed!', {
       description: `Receipt #${newTransaction.id}`,
     });
     
-    // Clear cart
     setCartItems([]);
     setIsCheckoutOpen(false);
     
-    // Switch to transaction history tab
     setActiveTab('transactions');
   };
-  
-  const totalAmount = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
   
   return (
     <MainLayout>

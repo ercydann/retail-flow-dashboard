@@ -34,12 +34,12 @@ interface InventoryTableProps {
 
 const InventoryTable = ({ items, onEditItem, onDeleteItem, categories }: InventoryTableProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all-categories');
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === '' || item.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all-categories' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 

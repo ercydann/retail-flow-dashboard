@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,11 +20,11 @@ const calculatePriceWithVat = (price: number, vat: number): number => {
 
 const ProductList = ({ products, onAddToCart, categories }: ProductListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all-categories');
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === '' || product.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all-categories' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
