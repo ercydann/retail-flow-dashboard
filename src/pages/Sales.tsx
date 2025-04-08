@@ -4,8 +4,10 @@ import MainLayout from '../components/layouts/MainLayout';
 import ProductList from '../components/sales/ProductList';
 import Cart, { CartItem } from '../components/sales/Cart';
 import CheckoutDialog from '../components/sales/CheckoutDialog';
+import TransactionHistory, { Transaction } from '../components/sales/TransactionHistory';
 import { toast } from 'sonner';
 import { ItemWithId } from '../components/inventory/AddItemForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Sales = () => {
   // Mock inventory data
@@ -88,6 +90,8 @@ const Sales = () => {
   
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [activeTab, setActiveTab] = useState('pos');
   
   const calculatePriceWithVat = (price: number, vat: number): number => {
     return price + (price * vat) / 100;
@@ -119,9 +123,11 @@ const Sales = () => {
             : cartItem
         )
       );
+      toast.success(`Added ${item.name} to cart`);
     } else {
       // Add new item to cart
       setCartItems([...cartItems, item]);
+      toast.success(`Added ${item.name} to cart`);
     }
   };
   
@@ -159,6 +165,18 @@ const Sales = () => {
   };
   
   const handleCompleteCheckout = (customerName: string, amountPaid: number) => {
+    // Create transaction record
+    const newTransaction: Transaction = {
+      id: `T${transactions.length + 1}${Date.now().toString().slice(-4)}`,
+      date: new Date(),
+      customerName,
+      items: [...cartItems],
+      totalAmount: totalAmount,
+      amountPaid
+    };
+    
+    setTransactions([newTransaction, ...transactions]);
+    
     // Update inventory
     setInventory(prev => 
       prev.map(item => {
@@ -173,9 +191,17 @@ const Sales = () => {
       })
     );
     
+    // Show success message
+    toast.success('Sale completed!', {
+      description: `Receipt #${newTransaction.id}`,
+    });
+    
     // Clear cart
     setCartItems([]);
     setIsCheckoutOpen(false);
+    
+    // Switch to transaction history tab
+    setActiveTab('transactions');
   };
   
   const totalAmount = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -184,25 +210,38 @@ const Sales = () => {
     <MainLayout>
       <h1 className="text-2xl font-bold mb-6">Point of Sale</h1>
       
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ProductList 
-            products={inventory} 
-            onAddToCart={handleAddToCart} 
-            categories={categories}
-          />
-        </div>
+      <Tabs defaultValue="pos" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="pos">POS Terminal</TabsTrigger>
+          <TabsTrigger value="transactions">Transaction History</TabsTrigger>
+        </TabsList>
         
-        <div className="lg:col-span-1">
-          <Cart 
-            items={cartItems}
-            onUpdateQuantity={handleUpdateQuantity}
-            onRemoveItem={handleRemoveItem}
-            onCheckout={handleCheckout}
-            inventory={inventory}
-          />
-        </div>
-      </div>
+        <TabsContent value="pos">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <ProductList 
+                products={inventory} 
+                onAddToCart={handleAddToCart} 
+                categories={categories}
+              />
+            </div>
+            
+            <div className="lg:col-span-1">
+              <Cart 
+                items={cartItems}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemoveItem={handleRemoveItem}
+                onCheckout={handleCheckout}
+                inventory={inventory}
+              />
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="transactions">
+          <TransactionHistory transactions={transactions} />
+        </TabsContent>
+      </Tabs>
       
       <CheckoutDialog 
         isOpen={isCheckoutOpen}
